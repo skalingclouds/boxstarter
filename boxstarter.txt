@@ -1,0 +1,153 @@
+# Open powershell ad administrator:
+# Set-ExecutionPolicy Unrestricted -Force
+# . { iwr -useb https://boxstarter.org/bootstrapper.ps1 } | iex; Get-Boxstarter -Force
+
+# Install-BoxstarterPackage -PackageName https://gist.githubusercontent.com/TheTrigger/aaf143b9e64b40d523ed9bdb47b1e53f/raw/boxstarter.ps1 -DisableReboots
+
+#BoxStarter options
+$BoxStarter.Rebootok=$true
+$BoxStarter.NoPassword=$false
+$BoxStarter.AutoLogin=$true
+
+#---- TEMPORARY ---
+Disable-UAC
+
+#if (Test-PendingReboot) { Invole-Reboot }
+Enable-ComputerRestore -Drive "C:\"
+Checkpoint-Computer "Pre software install snapshot"
+
+#Carry out all the Chocolatey installs
+cinst chocolatey -y
+choco feature enable -n=allowGlobalConfirmation
+cinst chocolatey-core.extension -y
+cinst chocolateygui -y
+cinst boxstarter -y
+
+# Privacy: Let apps use my advertising ID: Disable
+#Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo -Name Enabled -Type DWord -Value 0
+
+Set-WindowsExplorerOptions -EnableShowHiddenFilesFoldersDrives -EnableShowProtectedOSFiles -EnableShowFileExtensions
+#Enable-RemoteDesktop
+
+#https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-community?view=vs-2019
+cinst visualstudio2019community --add Microsoft.VisualStudio.Workload.NetCoreTools --add Microsoft.VisualStudio.Workload.ManagedGame --passive --locale en-US
+#cinst dotnetcore-sdk
+
+#--- Enable developer mode on the system ---
+Set-ItemProperty -Path HKLM:\Software\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowDevelopmentWithoutDevLicense -Value 1
+cinst firacode -y
+cinst hackfont -y
+
+cinst git.install -y --params "/NoShellIntegration"
+cinst Git-Credential-Manager-for-Windows -y
+cinst 7zip.install -y
+cinst openssh -y
+
+cinst powershell -y
+cinst dropbox -y
+cinst postman -y
+cinst gitkraken -y
+cinst sublimetext3 -y
+cinst sublimemerge -y
+cinst vscode -y
+cinst putty -y
+cinst winscp -y
+cinst anydesk.install -y
+cinst dbeaver   -y # microsoft store?
+cinst heidisql  -y # microsoft store?
+cinst telegram  -y # microsoft store?
+cinst hugo -y
+cinst unity-hub -y
+cinst winbox -y
+cinst rufus -y
+cinst speccy -y
+cinst nodejs -y
+cinst jetbrainstoolbox -y
+cinst hxd -y
+
+cinst microsoft-edge -y
+cinst opera -y
+cinst firefox -y
+cinst googlechrome -y
+
+#Make Chrome the default browser
+$chromePath = "${Env:ProgramFiles(x86)}\Google\Chrome\Application\" 
+$chromeApp = "chrome.exe"
+$chromeCommandArgs = "--make-default-browser"
+& "$chromePath$chromeApp" $chromeCommandArgs
+
+cinst battle.net -y
+cinst steam -y
+cinst logitechgaming -y
+cinst hearthstone-deck-tracker -y
+cinst discord.install -y
+cinst geforce-experience -y
+cinst msiafterburner -y
+
+cinst gimp -y
+cinst audacity -y
+cinst audacity-lame -y
+cinst audacity-ffmpeg -y
+cinst vlc -y
+cinst calibre -y
+cinst libreoffice-fresh -y
+cinst foxitreader -y --ia "/LANG=it"
+
+cinst TelnetClient -source windowsFeatures
+#cinst Microsoft-Hyper-V-All -source windowsFeatures # wsl no longer require this
+cinst Microsoft-Windows-Subsystem-Linux -source windowsFeatures
+
+cinst docker-desktop -y
+cinst docker-compose -y
+
+# addons già legati all'account
+#Install-ChocolateyVsixPackage xunit http://visualstudiogallery.msdn.microsoft.com/463c5987-f82b-46c8-a97e-b1cde42b9099/file/66837/1/xunit.runner.visualstudio.vsix
+
+
+# Pin to taskbar vscode sublimetext
+#Install-ChocolateyPinnedTaskBarItem "$env:windir\system32\mstsc.exe"
+
+
+# vs code install extensions? todo installa l'estensione della config remota
+#code "--install-extension" $name
+
+# install asus drivers
+
+# https://www.asus.com/it/Motherboards/ROG-STRIX-Z390-E-GAMING/HelpDesk_Download/
+
+#$DriverPath = [Environment]::GetFolderPath("Desktop") + "\asus-drivers\"
+#if(![System.IO.File]::Exists($DriverPath)) {
+#    mkdir $DriverPath
+#
+#    $drivers = @(
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/07VGA/DRV_VGA_Intel_CML_TP_W10_64_V27201008190_20200609R.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/01AUDIO/Audio_Realtek_UWD_SONICSTUDIO_III_TP_W10_64_VER6018666.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/04LAN/LAN_DRV_Intel_I219_UWD_TP_W10_64_VER121897_20190628R.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/08WIRELESS/DRV_WiFi_Intel_TP_W10_64_V219032_20200604R.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/05SATA/DRV_RST_Intel_19F1_TP_W10_64_VER17501017_20190702R.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/ROG_MAXIMUS_XI_APEX/MEUpdateTool_12.0.49.1534_T.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/02BT/DRV_Bluetooth_Intel_9461_9560_TP_W10_64_V219021_20200604R.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/14Utilities/ArmouryCrateInstallTool.zip"
+#        "https://dlcdnets.asus.com/pub/ASUS/mb/03CHIPSET/DRV_MEI_Intel_Cons_CNL_TP_W10_64_V19521401470_20200330R.zip"
+#    )
+#
+#    foreach ($driver in $drivers) {
+#        Start-BitsTransfer -Source $driver -Destination $DriverPath -TransferType Download
+#    }
+#
+#    explorer $DriverPath
+#}
+
+#Pin key applications to the TaskBar
+Install-ChocolateyPinnedTaskBarItem "$($Boxstarter.programFiles86)\Google\Chrome\Application\chrome.exe"
+
+del C:\eula*.txt
+del C:\install.*
+del C:\vcredist.*
+
+#Final system restore snapshot
+Checkpoint-Computer "Post software install snapshot"
+
+Enable-MicrosoftUpdate
+# turn on
+Install-WindowsUpdate -AcceptEula
