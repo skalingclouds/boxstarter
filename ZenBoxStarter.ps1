@@ -5066,9 +5066,9 @@ function Set-EdgeConfig {
     }
     # Set RestoreOnStartup value entry
     $IPHT = @{
-        Path  = $EdgeHome 
-        Name  = 'RestoreOnStartup' 
-        Value = 4 
+        Path  = $EdgeHome
+        Name  = 'RestoreOnStartup'
+        Value = 4
         Type  = 'DWORD'
     }
     Set-ItemProperty @IPHT -Verbose
@@ -5078,7 +5078,7 @@ function Set-EdgeConfig {
         New-Item -Path $EdgeSUURL | Out-Null
     }
     # Create a single URL startup page
-    $HOMEURL = 'https://duckduckgo.com'
+    $HOMEURL = 'https://google.com'
     Set-ItemProperty -Path $EdgeSUURL -Name '1' -Value $HomeURL
 }
 
