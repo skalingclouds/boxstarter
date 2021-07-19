@@ -121,7 +121,6 @@ $ChocoInstalls = @(
     'sharex',
     'toolsroot',
     'virtualbox',
-    'VirtualBox.ExtensionPack',
     'VirtualCloneDrive',
     'vlc',
     'win32diskimager',
@@ -135,7 +134,8 @@ $ChocoInstalls = @(
     'evga-precision-x1',
     'Spotify',
     'setuserfta',
-    'taskbarx'
+    'taskbarx',
+    'Autohotkey'
 )
 
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('http://boxstarter.org/bootstrapper.ps1')); get-boxstarter -Force
@@ -1000,7 +1000,7 @@ if (@($packages | Where-Object { $_.Name -eq 'PackageManagement' }).Count -eq 0)
     Install-Module PackageManagement -Force
     Install-Module PowerShellGet -Force
     Write-Host -ForegroundColor:Red "PowerShellGet and PackageManagement have been installed from the gallery. You need to close and rerun this script for them to work properly!"
-    Invoke-boxstarter -Rebootok
+    Invoke-BoxStarter -RebootOk
     Invoke-Reboot
 }
 else {
@@ -1388,12 +1388,12 @@ public static class Windows
 }
 
 function Start-SophiaScript {
-    Get-ChildItem -path $UtilBinPath -Filter *.zip | Where-Object { $_.Name -like "*Powershell*" } | Remove-Item -Force -Recurse
-    $SophiaFolderName =  (Get-ChildItem -Path $UtilBinPath -Filter 'Sophia*').Name
+    Get-ChildItem -Path $UtilBinPath -Filter *.zip | Where-Object { $_.Name -like "*Powershell*" } | Remove-Item -Force -Recurse
+    $SophiaFolderName = (Get-ChildItem -Path $UtilBinPath -Filter 'Sophia*').Name
     $SophiaOuterPath = "$UtilBinPath\$SophiaFolderName"
     $SophiaInnerPath = Get-ChildItem -Path $SophiaOuterPath
     $FullSophiaPath = "$SophiaOuterPath\$SophiaInnerPath"
-    If (test-path C:\SophiaComplete.txt) {
+    If (Test-Path C:\SophiaComplete.txt) {
         Write-Host "$SophiaScriptFileName has Already been Installed"
     }
     else {
@@ -1592,30 +1592,25 @@ function Start-WindowsOptimization {
 }
 
 function Install-LatestNvidiaDriver {
-    Param (
-        [switch]$clean = $false, # Will delete old drivers and install the new ones
-        [string]$folder = "$env:temp"   # Downloads and extracts the driver here
-    )
-
-    $scheduleTask = $false  # Creates a Scheduled Task to run to check for driver updates
-    $scheduleDay = "Sunday" # When should the scheduled task run (Default = Sunday)
-    $scheduleTime = "12pm"  # The time the scheduled task should run (Default = 12pm)
-
     # Checking currently installed driver version
     Write-Host "Attempting to detect currently installed driver version..."
-    #try {
+
     $VideoController = Get-WmiObject -ClassName Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" }
     $ins_version = ($VideoController.DriverVersion.Replace('.', '')[-5..-1] -join '').insert(3, '.')
-    #}
-    #catch {
-    #  Write-Host -ForegroundColor Yellow "Unable to detect a compatible Nvidia device."
-    #  Write-Output "Unable to detect a compatible Nvidia device" | Out-File "C:\NvidiaErrorLog.Log"
-    #}
     Write-Host "Installed version `t$ins_version"
-    if ($version -eq $ins_version) {
+    if ($version -eq $ins_version -or ((Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation")){
         Write-Host "The installed version is the same as the latest version."
     }
     else {
+            Param (
+                [switch]$clean = $false, # Will delete old drivers and install the new ones
+                [string]$folder = "$env:temp"   # Downloads and extracts the driver here
+            )
+
+            $scheduleTask = $false  # Creates a Scheduled Task to run to check for driver updates
+            $scheduleDay = "Sunday" # When should the scheduled task run (Default = Sunday)
+            $scheduleTime = "12pm"  # The time the scheduled task should run (Default = 12pm)
+
         # Checking if 7zip or WinRAR are installed
         # Check 7zip install path on registry
         $7zipinstalled = $false
@@ -1639,19 +1634,14 @@ function Install-LatestNvidiaDriver {
             # Delete the installer once it completes
             Remove-Item "$PSScriptRoot\7Zip.exe"
         }
-
         # Checking latest driver version from Nvidia website
         $link = Invoke-WebRequest -Uri 'https://www.nvidia.com/Download/processFind.aspx?psid=101&pfid=816&osid=57&lid=1&whql=1&lang=en-us&ctk=0&dtcid=0' -Method GET -UseBasicParsing
         $link -match '<td class="gridItem">([^<]+?)</td>' | Out-Null
         $version = $matches[1]
         Write-Host "Latest version `t`t$version"
-
         # Comparing installed driver version to latest driver version from Nvidia
-        if ($version -eq $ins_version) {
-            Write-Host "The installed version is the same as the latest version."
-        }
         # Checking Windows version
-        elseif ([Environment]::OSVersion.Version -ge (New-Object 'Version' 9, 1)) {
+        if ([Environment]::OSVersion.Version -ge (New-Object 'Version' 9, 1)) {
             $windowsVersion = "win10"
         }
         else {
@@ -1725,7 +1715,9 @@ function Install-AMDChipSetDrivers {
         Start-Process -FilePath "$UtilDownloadPath\amd-chipsetdriver.exe" -ArgumentList "/S" -Wait
         Write-Output "Chipset Install Completed, writing completed file to C:" | Out-File "C:\AMDChipsetComplete.txt"
     }
-    else {
+    elseif ( (Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation") {
+        write-host "running in a vm, skipping"
+    } {
         Write-Output "Chipset Install Already Ran"
     }
 }
@@ -1733,8 +1725,9 @@ function Install-AMDChipSetDrivers {
 function Install-AudioDriver {
     if (!(Test-Path "C:\AudioDriverComplete.txt")) {
         Write-Host "audio driver install"
-
-        Write-Output "Chipset Install Completed, writing completed file to C:" | Out-File "C:\AudioDriverComplete.txt"
+        Start-Process -FilePath "$UtilBinPath\Realtek_Audio_Driver_V6.0.8960.1_WIN10_64-bit\AsusSetup.exe"
+        Start-Sleep 45
+        Write-Output "Audio Driver Install Completed, writing completed file to C:" | Out-File "C:\AudioDriverComplete.txt"
     }
     else {
         Write-Output "Audio Driver Alrady Ran"
@@ -1743,7 +1736,11 @@ function Install-AudioDriver {
 
 function Install-MacriumBackup {
     if (!(Test-Path "C:\MacriumComplete.txt")) {
-        Write-Host "placeholder for macrium install"
+        Write-Host "Installing Macrium"
+        Write-Host "Importing License"
+        $license = Get-Content -Path "C:\BoxStarterSetup\Licenses\MacriumLicense.txt"
+        write-host "License is $license"
+        Start-Process -FilePath "$UtilDownloadPath\Macrium_v8_x64.exe" -ArgumentList "/passive /l log.txt $license"
         Write-Output "Macrium Install Complete, writing completed file to C:" | Out-File "C:\MacriumComplete.txt"
     }
     else {
@@ -1812,9 +1809,9 @@ function Set-PerformanceTweaks {
             #"DisableHPET",
             #"EnableGameMode",
             #"EnableHAGS",
-            # "DisableCoreParking",
-            #"DisableDMA",
-            #"DisablePKM",
+            #"DisableCoreParking",
+            "DisableDMA",
+            "DisablePKM",
             "DisallowDIP",
             "UseBigM",
             "ForceContiguousM",
@@ -1825,8 +1822,8 @@ function Set-PerformanceTweaks {
             #"NetworkOptimizations",
             #"RemoveEdit3D",
             "FixURLext", # fix issue with games shortcut that created by games lunchers turned white!
-            "UltimateCleaner",
-            'DisableIndexing'
+            #"UltimateCleaner",
+            #'DisableIndexing'
             "Finished"
             ### Auxiliary Functions ###
         )
@@ -1928,34 +1925,6 @@ function Set-PerformanceTweaks {
             Write-Output "Enabling LLMNR..."
             Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -ErrorAction SilentlyContinue
         }
-
-        # Set current network profile to private (allow file sharing, device discovery, etc.)
-        Function SetCurrentNetworkPrivate {
-            Write-Output "Setting current network profile to private..."
-            Set-NetConnectionProfile -NetworkCategory Private
-        }
-
-        # Set current network profile to public (deny file sharing, device discovery, etc.)
-        Function SetCurrentNetworkPublic {
-            Write-Output "Setting current network profile to public..."
-            Set-NetConnectionProfile -NetworkCategory Public
-        }
-
-        # Set unknown networks profile to private (allow file sharing, device discovery, etc.)
-        Function SetUnknownNetworksPrivate {
-            Write-Output "Setting unknown networks profile to private..."
-            If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\010103000F0000F0010000000F0000F0C967A3643C3AD745950DA7859209176EF5B87C875FA20DF21951640E807D7C24")) {
-                New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\010103000F0000F0010000000F0000F0C967A3643C3AD745950DA7859209176EF5B87C875FA20DF21951640E807D7C24" -Force | Out-Null
-            }
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\010103000F0000F0010000000F0000F0C967A3643C3AD745950DA7859209176EF5B87C875FA20DF21951640E807D7C24" -Name "Category" -Type DWord -Value 1
-        }
-
-        # Set unknown networks profile to public (deny file sharing, device discovery, etc.)
-        Function SetUnknownNetworksPublic {
-            Write-Output "Setting unknown networks profile to public..."
-            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\NetworkList\Signatures\010103000F0000F0010000000F0000F0C967A3643C3AD745950DA7859209176EF5B87C875FA20DF21951640E807D7C24" -Name "Category" -ErrorAction SilentlyContinue
-        }
-
         #Ask User If He Want to Enable Or Disable Microsoft Software Protection Platform Service
         Function askMSPPS {
             Write-Output "Disabling Microsoft Software Protection Platform Service and related Processes..."
@@ -2119,58 +2088,6 @@ function Set-PerformanceTweaks {
         }
 
         # Enable Windows Update automatic restart
-        Function EnableUpdateRestart {
-            Write-Output "Enabling Windows Update automatic restart..."
-            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "NoAutoRebootWithLoggedOnUsers" -ErrorAction SilentlyContinue
-            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Name "AUPowerManagement" -ErrorAction SilentlyContinue
-        }
-
-        # Enable Remote Desktop w/o Network Level Authentication
-        Function EnableRemoteDesktop {
-            Write-Output "Enabling Remote Desktop w/o Network Level Authentication..."
-            $errpref = $ErrorActionPreference #save actual preference
-            $ErrorActionPreference = "silentlycontinue"
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 0
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Type DWord -Value 0
-            Enable-NetFirewallRule -Name "RemoteDesktop*" | Out-Null
-            $ErrorActionPreference = $errpref #restore previous preference
-        }
-
-        # Disable Remote Desktop
-        Function DisableRemoteDesktop {
-            Write-Output "Disabling Remote Desktop..."
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Type DWord -Value 1
-            Disable-NetFirewallRule -Name "RemoteDesktop*"
-        }
-
-        # Disable Autoplay
-        Function DisableAutoplay {
-            Write-Output "Disabling Autoplay..."
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 1
-        }
-
-        # Enable Autoplay
-        Function EnableAutoplay {
-            Write-Output "Enabling Autoplay..."
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -Name "DisableAutoplay" -Type DWord -Value 0
-        }
-
-
-        Function DisableIndexing {
-            Write-Output "Stopping and disabling Windows Search indexing service..."
-            Stop-Service "WSearch" -WarningAction SilentlyContinue
-            Set-Service "WSearch" -StartupType Disabled
-        }
-
-        # Start and enable Windows Search indexing service
-        Function EnableIndexing {
-            Write-Output "Starting and enabling Windows Search indexing service..."
-            Set-Service "WSearch" -StartupType Automatic
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\WSearch" -Name "DelayedAutoStart" -Type DWord -Value 1
-            Start-Service "WSearch" -WarningAction SilentlyContinue
-        }
-
         # Set BIOS time to UTC #sc.exe config w32time start= delayed-auto#
         Function SetBIOSTimeUTC {
             Write-Output "Setting BIOS time to UTC..."
@@ -2203,66 +2120,6 @@ function Set-PerformanceTweaks {
             sc.exe config w32time start= auto
             Start-Service w32time
             W32tm /resync /force /nowait
-        }
-
-        # Enable Hibernation - Do not use on Server with automatically started Hyper-V hvboot service as it may lead to BSODs (Win10 with Hyper-V is fine)
-        Function EnableHibernation {
-            Write-Output "Enabling Hibernation..."
-            Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Session Manager\Power" -Name "HibernteEnabled" -Type Dword -Value 1
-            If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings")) {
-                New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" | Out-Null
-            }
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowHibernateOption" -Type Dword -Value 1
-        }
-
-        # Disable Hibernation
-        Function DisableHibernation {
-            Write-Output "Disabling Hibernation..."
-            Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Session Manager\Power" -Name "HibernteEnabled" -Type Dword -Value 0
-            If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings")) {
-                New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" | Out-Null
-            }
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowHibernateOption" -Type Dword -Value 0
-        }
-
-        # Disable Sleep start menu and keyboard button
-        Function DisableSleepButton {
-            Write-Output "Disabling Sleep start menu and keyboard button..."
-            If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings")) {
-                New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" | Out-Null
-            }
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowSleepOption" -Type Dword -Value 0
-            powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_BUTTONS SBUTTONACTION 0
-            powercfg /SETDCVALUEINDEX SCHEME_CURRENT SUB_BUTTONS SBUTTONACTION 0
-        }
-
-        # Enable Sleep start menu and keyboard button
-        Function EnableSleepButton {
-            Write-Output "Enabling Sleep start menu and keyboard button..."
-            If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings")) {
-                New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" | Out-Null
-            }
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" -Name "ShowSleepOption" -Type Dword -Value 1
-            powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_BUTTONS SBUTTONACTION 1
-            powercfg /SETDCVALUEINDEX SCHEME_CURRENT SUB_BUTTONS SBUTTONACTION 1
-        }
-
-        # Disable display and sleep mode timeouts
-        Function DisableSleepTimeout {
-            Write-Output "Disabling display and sleep mode timeouts..."
-            powercfg /X monitor-timeout-ac 0
-            powercfg /X monitor-timeout-dc 0
-            powercfg /X standby-timeout-ac 0
-            powercfg /X standby-timeout-dc 0
-        }
-
-        # Enable display and sleep mode timeouts
-        Function EnableSleepTimeout {
-            Write-Output "Enabling display and sleep mode timeouts..."
-            powercfg /X monitor-timeout-ac 10
-            powercfg /X monitor-timeout-dc 5
-            powercfg /X standby-timeout-ac 30
-            powercfg /X standby-timeout-dc 15
         }
 
         # Disable Fast Startup
@@ -2320,152 +2177,6 @@ function Set-PerformanceTweaks {
             Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\MouseKeys" -Name "TimeToMaximumSpeed" -Type String -Value "3000"
         }
 
-        #Turning Off Safe Search.
-        Function TurnOffSafeSearch {
-            Write-Output "Turning Off Safe Search..."
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings" -Name "SafeSearchMode" -Type DWord -Value 0
-        }
-
-        #Disabling Cloud Search.
-        Function DisableCloudSearch {
-            Write-Output "Disabling Cloud Search..."
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCloudSearch" -Type DWord -Value 0
-        }
-
-        #Disabling Device History.
-        Function DisableDeviceHistory {
-            Write-Output "Disabling Device History..."
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "DeviceHistoryEnabled" -Type DWord -Value 0
-        }
-
-        #Disabling Windows Remote Assistance.
-        Function DisableRemoteAssistance {
-            Write-Output "Disabling Windows Remote Assistance..."
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" -Name "fAllowFullControl" -Type DWord -Value 0
-            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0
-        }
-
-        #Disabling Search Histroy.
-        Function DisableSearchHistroy {
-            Write-Output "Disabling Search Histroy..."
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings" -Name "IsDeviceSearchHistoryEnabled" -Type DWord -Value 0
-        }
-
-        #Removing Microsoft MeetNow
-        Function RemoveMeet {
-            Write-Output "Disabling Microsoft MeetNow..."
-            $errpref = $ErrorActionPreference #save actual preference
-            $ErrorActionPreference = "silentlycontinue"
-            Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -ErrorAction SilentlyContinue
-            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -ErrorAction SilentlyContinue
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "HideSCAMeetNow" -Type DWord -Value 1
-            $ErrorActionPreference = $errpref #restore previous preference
-        }
-        ##########
-        # UI Tweaks
-        ##########
-
-        # Disable Action Center
-        Function DisableActionCenter {
-            Write-Output "Disabling Action Center..."
-            If (!(Test-Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer")) {
-                New-Item -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" | Out-Null
-            }
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -Type DWord -Value 0
-        }
-
-        # Enable Action Center
-        Function EnableActionCenter {
-            Write-Output "Enabling Action Center..."
-            Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter" -ErrorAction SilentlyContinue
-            Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -ErrorAction SilentlyContinue
-        }
-
-        # Disable Lock screen
-        Function DisableLockScreen {
-            Write-Output "Disabling Lock screen..."
-            If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization")) {
-                New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" | Out-Null
-            }
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -Type DWord -Value 1
-        }
-
-        # Enable Lock screen
-        Function EnableLockScreen {
-            Write-Output "Enabling Lock screen..."
-            Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -ErrorAction SilentlyContinue
-        }
-
-        # Disable Lock screen (Anniversary Update workaround) - Applicable to 1607 - 1803 (The GPO used in DisableLockScreen has been fixed again in 1803)
-        Function DisableLockScreenRS1 {
-            Write-Output "Disabling Lock screen using scheduler workaround..."
-            $service = New-Object -com Schedule.Service
-            $service.Connect()
-            $task = $service.NewTask(0)
-            $task.Settings.DisallowStartIfOnBatteries = $false
-            $trigger = $task.Triggers.Create(9)
-            $trigger = $task.Triggers.Create(11)
-            $trigger.StateChange = 8
-            $action = $task.Actions.Create(0)
-            $action.Path = "reg.exe"
-            $action.Arguments = "add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\SessionData /t REG_DWORD /v AllowLockScreen /d 0 /f"
-            $service.GetFolder("\").RegisterTaskDefinition("Disable LockScreen", $task, 6, "NT AUTHORITY\SYSTEM", $null, 4) | Out-Null
-        }
-
-        # Enable Lock screen (Anniversary Update workaround) - Applicable to 1607 - 1803
-        Function EnableLockScreenRS1 {
-            Write-Output "Enabling Lock screen (removing scheduler workaround)..."
-            Unregister-ScheduledTask -TaskName "Disable LockScreen" -Confirm:$false -ErrorAction SilentlyContinue
-        }
-
-        Function SetVisualFXAppearance {
-            Write-Output "Adjusting visual effects for appearance..."
-            Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "DragFullWindows" -Type String -Value 1
-            Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "MenuShowDelay" -Type String -Value 200
-            Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Type Binary -Value ([byte[]](158, 30, 7, 128, 18, 0, 0, 0))
-            Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Type String -Value 1
-            Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewAlphaSelect" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Type DWord -Value 1
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "VisualFXSetting" -Type DWord -Value 3
-            Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\DWM" -Name "EnableAeroPeek" -Type DWord -Value 1
-        }
-
-        ##########
-        # Explorer UI Tweaks
-        ##########
-
-        # Show known file extensions
-        Function ShowKnownExtensions {
-            Write-Output "Showing known file extensions..."
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
-        }
-
-        # Hide known file extensions
-        Function HideKnownExtensions {
-            Write-Output "Hiding known file extensions..."
-            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 1
-        }
-
-        ##########
-        # Application Tweaks
-        ##########
-
-        # Remove Default Fax Printer
-        Function RemoveFaxPrinter {
-            Write-Output "Removing Default Fax Printer..."
-            Remove-Printer -Name "Fax" -ErrorAction SilentlyContinue
-        }
-
-        # Add Default Fax Printer
-        Function AddFaxPrinter {
-            Write-Output "Adding Default Fax Printer..."
-            Add-Printer -Name "Fax" -DriverName "Microsoft Shared Fax Driver" -PortName "SHRFAX:" -ErrorAction SilentlyContinue
-        }
-
         # Add SVCHost Tweak
         Function SVCHostTweak {
             Write-Output "Adding SVCHost Tweak..."
@@ -2512,28 +2223,28 @@ function Set-PerformanceTweaks {
         #Detecting Windows Scale Layout Automatically and applying mouse fix according to it!
         Function DetectnApplyMouseFIX {
             Add-Type @'
-  using System;
-  using System.Runtime.InteropServices;
-  using System.Drawing;
+            using System;
+            using System.Runtime.InteropServices;
+            using System.Drawing;
 
-  public class DPI {
-    [DllImport("gdi32.dll")]
-    static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
+            public class DPI {
+                [DllImport("gdi32.dll")]
+                static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
 
-    public enum DeviceCap {
-      VERTRES = 10,
-      DESKTOPVERTRES = 117
-    }
+            public enum DeviceCap {
+                VERTRES = 10,
+                DESKTOPVERTRES = 117
+            }
 
-    public static float scaling() {
-      Graphics g = Graphics.FromHwnd(IntPtr.Zero);
-      IntPtr desktop = g.GetHdc();
-      int LogicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.VERTRES);
-      int PhysicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.DESKTOPVERTRES);
+            public static float scaling() {
+                Graphics g = Graphics.FromHwnd(IntPtr.Zero);
+                IntPtr desktop = g.GetHdc();
+                int LogicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.VERTRES);
+                int PhysicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.DESKTOPVERTRES);
 
-      return (float)PhysicalScreenHeight / (float)LogicalScreenHeight;
-    }
-  }
+                return (float)PhysicalScreenHeight / (float)LogicalScreenHeight;
+            }
+        }
 '@ -ReferencedAssemblies 'System.Drawing.dll'
 
             $checkscreenscale = [Math]::round([DPI]::scaling(), 2) * 100
@@ -3110,8 +2821,7 @@ function Set-PerformanceTweaks {
         # Call the desired tweak functions
         $tweaks | ForEach-Object { Invoke-Expression $_ }
         Write-Output "Performance Tweaks Configuration Complete, writing completed file to C:" | Out-File "C:\PerformanceTweaksComplete.txt"
-    }
-    else {
+    } else {
         Write-Output "Performance Tweaks Already Ran"
     }
 }
