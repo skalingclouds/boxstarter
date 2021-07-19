@@ -2945,7 +2945,7 @@ function Set-GitConfig {
 }
 
 function Install-AMDChipSetDrivers {
-    if (Test-Path "C:\AMDChipsetComplete.txt" -or (Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation") {
+    if (Test-Path "C:\AMDChipsetComplete.txt") {
         Write-Host "AMD Install Already Ran"
     }
     else {
