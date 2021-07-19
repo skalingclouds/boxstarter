@@ -1710,17 +1710,6 @@ function Install-LatestNvidiaDriver {
         Remove-Item $nvidiaTempFolder -Recurse -Force
     }
 }
-function Install-AMDChipSetDrivers {
-    if (!(Test-Path "C:\AMDChipsetComplete.txt")) {
-        Start-Process -FilePath "$UtilDownloadPath\amd-chipsetdriver.exe" -ArgumentList "/S" -Wait
-        Write-Output "Chipset Install Completed, writing completed file to C:" | Out-File "C:\AMDChipsetComplete.txt"
-    }
-    elseif ( (Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation") {
-        write-host "running in a vm, skipping"
-    } {
-        Write-Output "Chipset Install Already Ran"
-    }
-}
 
 function Install-AudioDriver {
     if (!(Test-Path "C:\AudioDriverComplete.txt")) {
@@ -2954,6 +2943,18 @@ function Set-GitConfig {
     if (-not(Test-Path 'C:\GitHub')) { New-Item -Path 'C:\GitHub' -ItemType Directory }
     if (-not(Test-Path (Join-Path $env:USERPROFILE 'GitHub'))) { New-Item -Path (Join-Path $env:USERPROFILE 'GitHub') -ItemType SymbolicLink -Value 'C:\GitHub' }
     if ((Test-Path 'D:\') -and -not(Test-Path 'D:\GitHub')) { New-Item -Path 'D:\GitHub' -ItemType SymbolicLink -Value 'C:\GitHub' }
+}
+
+function Install-AMDChipSetDrivers {
+    if (!(Test-Path "C:\AMDChipsetComplete.txt")) {
+        Start-Process -FilePath "$UtilDownloadPath\amd-chipsetdriver.exe" -ArgumentList "/S" -Wait
+        Write-Output "Chipset Install Completed, writing completed file to C:" | Out-File "C:\AMDChipsetComplete.txt"
+    }
+    elseif ( (Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation") {
+        Write-Host "running in a vm, skipping"
+    } {
+        Write-Output "Chipset Install Already Ran"
+    }
 }
 
 Install-ChocoPackagesWithArgs
