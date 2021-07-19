@@ -28,17 +28,17 @@ $ManualDownloadInstall = @{
 }
 # Releases based github packages to download and install. I include Keeweb and the Hack font I love so dearly
 $GithubReleasesPackages = @{
-    'farag2/Windows-10-Sophia-Script' = 'Sophia.Script.v*.*.*.zip'
-    'Maassoft/ColorControl'           = 'ColorControl.zip';
-    'lostindark/DriverStoreExplorer'  = 'DriverStoreExplorer.v*.*.*.zip';
-    'krlvm/BeautySearch'              = 'BeautySearch.exe';
-    'sandboxie-plus/Sandboxie'        = 'Sandboxie-Plus-x64.exe'
-    'stnkl/EverythingToolbar'         = 'EverythingToolbar-*.*.*.msi';
-    'Hofknecht/SystemTrayMenu'        = 'SystemTrayMenu-*.*.*.*.zip';
-    'Klocman/Bulk-Crap-Uninstaller'   = 'BCUninstaller_*.*_setup.exe';
-    'svenmauch/WinSlap'               = 'WinSlap.exe';
-    'AlexanderPro/SmartSystemMenu'    = 'SmartSystemMenu_v*.*.*.zip';
-    'CXWorld/CapFrameX'               = 'CapFrameX_v*.*.*_Portable.zip'
+    'farag2/Windows-10-Sophia-Script' = 'Sophia.Script.v*.*.*.zip';
+    #'Maassoft/ColorControl'           = 'ColorControl.zip';
+    #'lostindark/DriverStoreExplorer'  = 'DriverStoreExplorer.v*.*.*.zip';
+    #'krlvm/BeautySearch'              = 'BeautySearch.exe';
+    #'sandboxie-plus/Sandboxie'        = 'Sandboxie-Plus-x64.exe'
+    #'stnkl/EverythingToolbar'         = 'EverythingToolbar-*.*.*.msi';
+    #'Hofknecht/SystemTrayMenu'        = 'SystemTrayMenu-*.*.*.*.zip';
+    #'Klocman/Bulk-Crap-Uninstaller'   = 'BCUninstaller_*.*_setup.exe';
+    #'svenmauch/WinSlap'               = 'WinSlap.exe';
+    #'AlexanderPro/SmartSystemMenu'    = 'SmartSystemMenu_v*.*.*.zip';
+    #'CXWorld/CapFrameX'               = 'CapFrameX_v*.*.*_Portable.zip'
 }
 
 # PowerShell Modules to install
@@ -1388,18 +1388,16 @@ public static class Windows
 }
 
 function Start-SophiaScript {
-    Get-ChildItem -Path $UtilBinPath -Filter *.zip | Where-Object { $_.Name -like "*Powershell*" } | Remove-Item -Force -Recurse
-    $SophiaFolderName = (Get-ChildItem -Path $UtilBinPath -Filter 'Sophia*').Name
-    $SophiaOuterPath = "$UtilBinPath\$SophiaFolderName"
-    $SophiaInnerPath = Get-ChildItem -Path $SophiaOuterPath
-    $FullSophiaPath = "$SophiaOuterPath\$SophiaInnerPath"
+    Get-ChildItem -Path "$UtilBinPath\Sophia" | Where-Object { $_.Name -like "*Powershell*" } | Remove-Item -Force -Recurse
+    $SophiaFolderName = (Get-ChildItem -Path "$UtilBinPath\Sophia" -Filter 'Sophia*').Name
+    $SophiaPath = "$UtilBinPath\Sophia\$SophiaFolderName"
     If (Test-Path C:\SophiaComplete.txt) {
-        Write-Host "$SophiaScriptFileName has Already been Installed"
+        Write-Host "Sophia has Already been Installed"
     }
     else {
-        $localizations = Join-Path $FullSophiaPath "Localizations"
+        $localizations = Join-Path $SophiaPath "Localizations"
         Remove-Module -Name Sophia -Force -ErrorAction Ignore
-        Import-Module -Name "$FullSophiaPath\Manifest\Sophia.psd1" -PassThru -Force
+        Import-Module -Name "$SophiaPath\Manifest\Sophia.psd1" -PassThru -Force
         Import-LocalizedData -BindingVariable Global:Localization -FileName Sophia -BaseDirectory $localizations
         Logging
         CreateRestorePoint
@@ -2946,17 +2944,15 @@ function Set-GitConfig {
 }
 
 function Install-AMDChipSetDrivers {
-    if (!(Test-Path "C:\AMDChipsetComplete.txt")) {
+    if (Test-Path "C:\AMDChipsetComplete.txt" -or (Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation") {
+        Write-Host "AMD Install Already Ran"
+    }
+    else {
         Start-Process -FilePath "$UtilDownloadPath\amd-chipsetdriver.exe" -ArgumentList "/S" -Wait
         Write-Output "Chipset Install Completed, writing completed file to C:" | Out-File "C:\AMDChipsetComplete.txt"
     }
-    elseif ( (Get-WmiObject Win32_BaseBoard).Manufacturer -eq "Microsoft Corporation") {
-        Write-Host "running in a vm, skipping"
-    } {
-        Write-Output "Chipset Install Already Ran"
-    }
 }
-
+Start-SophiaScript
 Install-ChocoPackagesWithArgs
 Install-LatestNvidiaDriver -clean
 Install-AMDChipSetDrivers
@@ -2964,15 +2960,12 @@ Set-GitConfig
 New-CustomTerminal
 Install-AudioDriver
 Install-MacriumBackup
-Start-SophiaScript
 Start-WindowsOptimization
-
 Enable-MicrosoftUpdate
 Install-WindowsUpdate -acceptEula -getUpdatesFromMS
 Start-WinImageBackup
 Start-WindowsCleanup
-Set-TestTweaks
-
+#Set-TestTweaks
 #Set-PerformanceTweaks
 
 if (Test-PendingReboot) {
