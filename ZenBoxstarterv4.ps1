@@ -3269,3 +3269,4 @@ if (Test-PendingReboot) {
 }
 
 Write-Host -ForegroundColor:Green "Install and configuration complete!"
+##
