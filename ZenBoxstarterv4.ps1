@@ -1,15 +1,14 @@
+
 #Windows Tweaks
 $Configuration = @(
     'DisableWiFiSense',
     'DisableMapUpdates',
     'DisableFeedback',
-    'DisableErrorReporting',
     'DisableWAPPush',
     'DisableSleepTimeout',
     'DisableRemoteAssistance',
     'UninstallMsftBloat',
     'UninstallThirdPartyBloat',
-    'ShowSmallTaskbarIcons',
     'DisableFastStartup',
     'DisableSuperfetch',
     'SetUnknownNetworksPrivate',
@@ -29,16 +28,16 @@ $ManualDownloadInstall = @{
 # Releases based github packages to download and install. I include Keeweb and the Hack font I love so dearly
 $GithubReleasesPackages = @{
     'farag2/Windows-10-Sophia-Script' = 'Sophia.Script.v*.*.*.zip';
-    #'Maassoft/ColorControl'           = 'ColorControl.zip';
-    #'lostindark/DriverStoreExplorer'  = 'DriverStoreExplorer.v*.*.*.zip';
-    #'krlvm/BeautySearch'              = 'BeautySearch.exe';
-    #'sandboxie-plus/Sandboxie'        = 'Sandboxie-Plus-x64.exe'
-    #'stnkl/EverythingToolbar'         = 'EverythingToolbar-*.*.*.msi';
-    #'Hofknecht/SystemTrayMenu'        = 'SystemTrayMenu-*.*.*.*.zip';
-    #'Klocman/Bulk-Crap-Uninstaller'   = 'BCUninstaller_*.*_setup.exe';
-    #'svenmauch/WinSlap'               = 'WinSlap.exe';
-    #'AlexanderPro/SmartSystemMenu'    = 'SmartSystemMenu_v*.*.*.zip';
-    #'CXWorld/CapFrameX'               = 'CapFrameX_v*.*.*_Portable.zip'
+    'Maassoft/ColorControl'           = 'ColorControl.zip';
+    'lostindark/DriverStoreExplorer'  = 'DriverStoreExplorer.v*.*.*.zip';
+    'krlvm/BeautySearch'              = 'BeautySearch.exe';
+    'sandboxie-plus/Sandboxie'        = 'Sandboxie-Plus-x64.exe';
+    'stnkl/EverythingToolbar'         = 'EverythingToolbar-*.*.*.msi';
+    'Hofknecht/SystemTrayMenu'        = 'SystemTrayMenu-*.*.*.*.zip';
+    'Klocman/Bulk-Crap-Uninstaller'   = 'BCUninstaller_*.*_setup.exe';
+    'svenmauch/WinSlap'               = 'WinSlap.exe';
+    'AlexanderPro/SmartSystemMenu'    = 'SmartSystemMenu_v*.*.*.zip';
+    'CXWorld/CapFrameX'               = 'CapFrameX_v*.*.*_Portable.zip'
 }
 
 # PowerShell Modules to install
@@ -78,6 +77,7 @@ $ModulesToBeInstalled = @(
 # Chocolatey packages to install
 $ChocoInstalls = @(
     'powershell-core',
+    'microsoft-windows-terminal',
     'chocolateygui',
     'gitkraken',
     'gpg4win',
@@ -92,7 +92,7 @@ $ChocoInstalls = @(
     'notepadplusplus',
     'chocolateypackageupdater',
     'windirstat',
-    'quciklook',
+    'quicklook',
     'cascadia-code-nerd-font',
     'terminal-icons.powershell',
     'notion',
@@ -150,6 +150,7 @@ Disable-UAC
 Enable-RemoteDesktop
 choco feature enable -n allowGlobalConfirmation
 # Need this to download via Invoke-WebRequest
+
 [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 # Trust the psgallery for installs
@@ -1058,7 +1059,7 @@ Foreach ($software in $GithubReleasesPackages.keys) {
             if ( -not (Test-Path $_.name)) {
                 try {
                     Write-Output "Downloading $($_.name)..."
-                    Invoke-WebRequest $_.'browser_download_url' -OutFile $DownloadPath
+                    Invoke-WebRequest -ContentType "application/octet-stream" $_.'browser_download_url' -OutFile $DownloadPath
                     $FilesDownloaded += $_.Name
                 }
                 catch {}
@@ -1076,7 +1077,7 @@ Foreach ($software in $ManualDownloadInstall.keys) {
     $DownloadPath = (Join-Path $UtilDownloadPath $software)
     if ( -not (Test-Path $software) ) {
         try {
-            Invoke-WebRequest $ManualDownloadInstall[$software] -OutFile $DownloadPath -UseBasicParsing
+            Invoke-WebRequest -ContentType "application/octet-stream" $ManualDownloadInstall[$software] -OutFile $DownloadPath -UseBasicParsing
             $FilesDownloaded += $software
         }
         catch {}
