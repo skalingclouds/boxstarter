@@ -64,7 +64,6 @@ $ModulesToBeInstalled = @(
     'PSGraph',
     'psmsgraph',
     'PSScriptAnalyzer',
-    'SharePointPnPPowerShellOnline',
     'SnippetPx',
     'WinSCP',
     'psWinGlue',
