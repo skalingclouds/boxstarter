@@ -2966,8 +2966,8 @@ Enable-MicrosoftUpdate
 Install-WindowsUpdate -acceptEula -getUpdatesFromMS
 Start-WinImageBackup
 Start-WindowsCleanup
-#Set-TestTweaks
-#Set-PerformanceTweaks
+Set-TestTweaks
+Set-PerformanceTweaks
 
 if (Test-PendingReboot) {
     Write-Host "Finished, Computer needs a reboot!"
