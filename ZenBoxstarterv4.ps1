@@ -22,7 +22,7 @@ $ManualDownloadInstall = @{
     'l-connect.zip'          = 'https://lian-li.com/downloads/L-connect.zip';
     'device-cleanup-cmd.zip' = 'https://www.uwe-sieber.de/files/devicecleanupcmd.zip';
     'benchmate.exe'          = 'https://s3.eu-central-1.wasabisys.com/benchmate/downloads/bm-0.10.7.2-offline.exe';
-    'MacriumV8-Latest.zip'   = 'https://skalingclouds.blob.core.windows.net/zenboxsetupfiles/Macrium_v8_x64.exe';
+    'MacriumV8-Latest.exe'   = 'https://skalingclouds.blob.core.windows.net/zenboxsetupfiles/Macrium_v8_x64.exe';
     'mobros.exe'             = 'https://skalingclouds.blob.core.windows.net/zenboxsetupfiles/MoBros.exe'
 }
 # Releases based github packages to download and install. I include Keeweb and the Hack font I love so dearly
@@ -1126,12 +1126,14 @@ function New-CustomTerminal {
             Install-Module -Name PowershellGet -Repository PSGallery -Force -AllowClobber
             Update-Module -Name PackageManagement -Force
             Invoke-BoxStarter -RebootOk
+            RefreshEnv.cmd
+            
         }
         else {
             Remove-Module PowerShellGet, PackageManagement -Force
             Import-Module -Name PowerShellGet -Force
             Import-PackageProvider -Name PowerShellGet -Force -MinimumVersion 2.0.0
-            Update-SessionEnvironment
+            
         }
         If (Test-Path $Powershell7UserProfile) {
             Remove-Item -Path $Powershell7UserProfile -Force
@@ -1511,7 +1513,7 @@ function Start-SophiaScript {
 }
 
 function Start-WindowsOptimization {
-    if (Test-Path "C:\WinOptimizationComplete.txt" -eq False) {
+    if (!(Test-Path "C:\WinOptimizationComplete.txt")) {
         # Disable Core Isolation Memory Integrity
         Write-Output "Disabling Core Isolation Memory Integrity..."
         Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "Enabled" -ErrorAction SilentlyContinue
@@ -1583,7 +1585,7 @@ function Start-WindowsOptimization {
         Set-ItemProperty -Path "HKCR:\Applications\photoviewer.dll\shell\open" -Name "MuiVerb" -Type String -Value "@photoviewer.dll,-3043"
         Set-ItemProperty -Path "HKCR:\Applications\photoviewer.dll\shell\open\command" -Name "(Default)" -Type ExpandString -Value "%SystemRoot%\System32\rundll32.exe `"%ProgramFiles%\Windows Photo Viewer\PhotoViewer.dll`", ImageView_Fullscreen %1"
         Set-ItemProperty -Path "HKCR:\Applications\photoviewer.dll\shell\open\DropTarget" -Name "Clsid" -Type String -Value "{FFE2A43C-56B9-4bf5-9A79-CC6D4285608A}"
-        Write-Output "Finished Windows Cleanup, Creating text file as flag to not run again" | Out-File "C:\WinOptimizationComplete.txt"
+        Write-Output "Finished Windows Optimization, Creating text file as flag to not run again" | Out-File "C:\WinOptimizationComplete.txt"
     }
     else {
         Write-Output "Optimization Already Ran"
@@ -1712,10 +1714,12 @@ function Install-LatestNvidiaDriver {
 
 function Install-AudioDriver {
     if (!(Test-Path "C:\AudioDriverComplete.txt")) {
+        $AudioDriverFolder = "audio-driver"
+        $AudioDriverFileName = "AsusSetup.exe"
         Write-Host "audio driver install"
-        Start-Process -FilePath "$UtilBinPath\Realtek_Audio_Driver_V6.0.8960.1_WIN10_64-bit\AsusSetup.exe"
+        Start-Process -FilePath "$UtilBinPath\$AudioDriverFolder\$AudioDriverFileName"
         Start-Sleep 45
-        Write-Output "Audio Driver Install Completed, writing completed file to C:" | Out-File "C:\AudioDriverComplete.txt"
+        Write-Output "WinOptimization Complete, writing completed file to C:" | Out-File "C:\AudioDriverComplete.txt"
     }
     else {
         Write-Output "Audio Driver Alrady Ran"
@@ -1723,12 +1727,14 @@ function Install-AudioDriver {
 }
 
 function Install-MacriumBackup {
+    $MacriumFolderName = "MacriumV8-Latest"
+    $MacriumFileName = "MacriumV8-Latest.exe"
     if (!(Test-Path "C:\MacriumComplete.txt")) {
         Write-Host "Installing Macrium"
         Write-Host "Importing License"
         $license = Get-Content -Path "C:\BoxStarterSetup\Licenses\MacriumLicense.txt"
         write-host "License is $license"
-        Start-Process -FilePath "$UtilDownloadPath\Macrium_v8_x64.exe" -ArgumentList "/passive /l log.txt $license"
+        Start-Process -FilePath "$UtilDownloadPath\$MacriumFolderName\$MacriumFileName" -ArgumentList "/passive /l log.txt $license"
         Write-Output "Macrium Install Complete, writing completed file to C:" | Out-File "C:\MacriumComplete.txt"
     }
     else {
@@ -2913,12 +2919,6 @@ function Set-GitConfig {
     #--- Configure Git ---
     git config --global user.name 'Chris Skaling'
     git config --global user.email 'Chris.Skaling@gmail.com'
-    if (Get-Command nano -ErrorAction SilentlyContinue) {
-        git config --global core.editor nano
-    }
-    else {
-        git config --global core.editor code
-    }
     git config --global core.symlinks true
     git config --global core.autocrlf true
     git config --global color.status auto
@@ -2936,8 +2936,6 @@ function Set-GitConfig {
     git config --global alias.ps push
     git config --global alias.ph push
     git config --global alias.pl pull
-    git config --global gpg.program $(Resolve-Path (Get-Command gpg | Select-Object -Expand Source) | Select-Object -Expand Path)
-
     # Make a folder for my GitHub repos and make SymbolicLinks to it
     if (-not(Test-Path 'C:\GitHub')) { New-Item -Path 'C:\GitHub' -ItemType Directory }
     if (-not(Test-Path (Join-Path $env:USERPROFILE 'GitHub'))) { New-Item -Path (Join-Path $env:USERPROFILE 'GitHub') -ItemType SymbolicLink -Value 'C:\GitHub' }
@@ -2949,8 +2947,10 @@ function Install-AMDChipSetDrivers {
         Write-Host "AMD Install Already Ran"
     }
     else {
-        Start-Process -FilePath "$UtilDownloadPath\amd-chipsetdriver.exe" -ArgumentList "/S" -Wait
+        Start-Process -FilePath "$UtilDownloadPath\amd-chipsetdriver.exe" -ArgumentList "/S"
         Write-Output "Chipset Install Completed, writing completed file to C:" | Out-File "C:\AMDChipsetComplete.txt"
+        write-host "sleeping for 30 seconds"
+        Start-Sleep 30
     }
 }
 Start-SophiaScript
