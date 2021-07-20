@@ -1735,6 +1735,8 @@ function Install-MacriumBackup {
         write-host "License is $license"
         Start-Process -FilePath "$UtilDownloadPath\$MacriumFolderName\$MacriumFileName" -ArgumentList "/passive /l log.txt $license"
         Write-Output "Macrium Install Complete, writing completed file to C:" | Out-File "C:\MacriumComplete.txt"
+        Write-Output "sleeping 30 seconds.."
+        Start-Sleep 30
     }
     else {
         Write-Output "Macrium Alrady Ran"
